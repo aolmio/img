@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lookback - Reverse Image Search</title>
+<meta name="description" content="Send one image straight to Google, Bing, Yandex, TinEye and more. No middleman host.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🔎%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f3f1ec;--panel:#fff;--ink:#17202a;--mute:#5d6874;--line:#d9d5cb;--accent:#1d4ed8;--accent2:#0f766e;--danger:#b42318;--ok:#0f766e;--shadow:0 1px 2px rgba(23,32,42,.06),0 8px 24px rgba(23,32,42,.06);--onacc:#fff}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12161c;--panel:#1a2029;--ink:#e8ecf1;--mute:#97a3b0;--line:#2c3541;--accent:#6ea0ff;--accent2:#4fd1c0;--danger:#ff8a80;--ok:#4fd1c0;--shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25);--onacc:#0b1220}}
+:root[data-theme="dark"]{--bg:#12161c;--panel:#1a2029;--ink:#e8ecf1;--mute:#97a3b0;--line:#2c3541;--accent:#6ea0ff;--accent2:#4fd1c0;--danger:#ff8a80;--ok:#4fd1c0;--shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25);--onacc:#0b1220}
+*{box-sizing:border-box;margin:0}
+html{background:var(--bg)}
+body{font-family:Inter,system-ui,sans-serif;color:var(--ink);background:var(--bg);line-height:1.5;min-height:100vh}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+header{max-width:1080px;margin:0 auto;padding:28px 20px 8px;display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+h1{font-family:Fraunces,Georgia,serif;font-weight:800;font-size:clamp(2.2rem,6vw,3.6rem);letter-spacing:-.02em;line-height:1}
+.sub{color:var(--mute);margin-top:10px;max-width:58ch}
+.ghost{background:transparent;border:1px solid var(--line);border-radius:8px;padding:8px 12px;cursor:pointer}
+.ghost:hover{border-color:var(--accent)}
+.ghost:disabled{opacity:.45;cursor:not-allowed}
+main{max-width:1080px;margin:0 auto;padding:12px 20px 40px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px}
+@media (max-width:860px){main{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;box-shadow:var(--shadow)}
+.wide{grid-column:1/-1}
+h2{font-family:Fraunces,Georgia,serif;font-size:1.25rem;margin-bottom:12px}
+#drop{border:2px dashed var(--line);border-radius:12px;min-height:250px;display:flex;align-items:center;justify-content:center;text-align:center;padding:16px;cursor:pointer;transition:border-color .15s,background .15s}
+#drop.over{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,transparent)}
+#drop.has{border-style:solid;padding:8px}
+#preview{max-width:100%;max-height:340px;border-radius:8px;display:none;object-fit:contain}
+#drop.has #preview{display:block}
+#drop.has .hint{display:none}
+.hint strong{font-size:1.05rem}
+.hint span{display:block;color:var(--mute);font-size:.9rem;margin-top:4px}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.row>*{flex:1 1 auto}
+input[type=url],input[type=text],select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.btn{background:var(--accent);color:var(--onacc);border:0;border-radius:8px;padding:10px 16px;font-weight:600;cursor:pointer}
+.btn.alt{background:var(--accent2)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.meta{margin-top:12px;font-size:.88rem;color:var(--mute);display:grid;grid-template-columns:auto 1fr;gap:2px 12px}
+.meta b{color:var(--ink);font-weight:500;word-break:break-all}
+#status{margin-top:12px;font-size:.92rem;min-height:1.4em}
+#status.err{color:var(--danger)}
+#status.ok{color:var(--ok)}
+.engines{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px}
+.eng{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--bg)}
+.eng.off{opacity:.5}
+.eng input{width:18px;height:18px;accent-color:var(--accent)}
+.eng label{flex:1;cursor:pointer;display:flex;flex-direction:column}
+.eng small{color:var(--mute);font-size:.78rem}
+.eng button{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:.85rem}
+.eng button:hover:not(:disabled){border-color:var(--accent)}
+.eng button:disabled{opacity:.4;cursor:not-allowed}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.tab{border:1px solid var(--line);background:transparent;border-radius:999px;padding:5px 12px;cursor:pointer;font-size:.85rem}
+.tab[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.empty{color:var(--mute);font-size:.88rem}
+label.f{display:block;font-size:.82rem;color:var(--mute);margin-bottom:4px}
+#history{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px}
+#history button{border:1px solid var(--line);border-radius:8px;overflow:hidden;padding:0;background:var(--bg);cursor:pointer;aspect-ratio:1}
+#history img{width:100%;height:100%;object-fit:cover;display:block}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:s .7s linear infinite;vertical-align:-2px;margin-right:6px}
+@keyframes s{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+footer{max-width:1080px;margin:0 auto;padding:0 20px 40px;color:var(--mute);font-size:.82rem}
+</style>
+</head>
+<body>
+<header>
+<div>
+<h1>Lookback</h1>
+<p class="sub">Send your image straight to Google, Bing, Yandex and other engines. Nothing is uploaded to a third-party host first.</p>
+</div>
+<button class="ghost" id="theme" type="button">Theme</button>
+</header>
+
+<main>
+<section class="card">
+<h2>Your image</h2>
+<div id="drop" tabindex="0" role="button" aria-label="Choose, drop or paste an image">
+<img id="preview" alt="Selected image preview">
+<div class="hint"><strong>Drop an image here</strong><span>or click to browse, paste with Ctrl+V, or use the camera</span></div>
+</div>
+<input id="file" type="file" accept="image/*" hidden>
+<input id="cam" type="file" accept="image/*" capture="environment" hidden>
+<div class="row">
+<button class="ghost" id="pick" type="button">Browse files</button>
+<button class="ghost" id="camBtn" type="button">Take photo</button>
+<button class="ghost" id="pasteBtn" type="button">Paste from clipboard</button>
+<button class="ghost" id="clear" type="button">Clear</button>
+</div>
+<div class="row">
+<input id="url" type="url" placeholder="Or paste an image link (https://...)" aria-label="Image URL">
+<button class="btn" id="load" type="button" style="flex:0 0 auto">Use link</button>
+</div>
+<div class="row">
+<div style="flex:1 1 200px">
+<label class="f" for="maxw">Shrink large images before sending</label>
+<select id="maxw">
+<option value="0">Keep original</option>
+<option value="2048">Max 2048 px</option>
+<option value="1600" selected>Max 1600 px</option>
+<option value="1024">Max 1024 px</option>
+</select>
+</div>
+</div>
+<div class="meta" id="meta" hidden></div>
+<div id="status" role="status" aria-live="polite"></div>
+</section>
+
+<section class="card">
+<h2>Search engines</h2>
+<div class="tabs" id="tabs"></div>
+<div class="engines" id="engines"></div>
+<div class="row">
+<button class="btn" id="go" type="button" disabled>Search selected</button>
+<button class="btn alt" id="all" type="button" disabled>Search all</button>
+<button class="ghost" id="sel" type="button">Select all</button>
+<button class="ghost" id="none" type="button">None</button>
+</div>
+<div class="row">
+<button class="ghost" id="copyImg" type="button" disabled>Copy image</button>
+<button class="ghost" id="dl" type="button" disabled>Download image</button>
+</div>
+<p class="empty" id="modeNote" style="margin-top:10px"></p>
+</section>
+
+<section class="card wide">
+<h2>Manual fallback</h2>
+<p class="empty">If an engine rejects the direct send, copy the image, open its upload page, and press Ctrl+V.</p>
+<div class="row" id="manual"></div>
+</section>
+
+<section class="card wide">
+<h2>Recent images</h2>
+<div id="history"></div>
+<div class="row"><button class="ghost" id="wipe" type="button" style="flex:0 0 auto">Clear history</button></div>
+</section>
+</main>
+
+<footer>Runs in your browser only. Your image goes directly from this page to the engine you choose, using the same upload form each engine's own site uses.</footer>
+
+<script>
+const $=id=>document.getElementById(id);
+const ENGINES=[
+{id:"google",name:"Google Images",cat:"General",note:"Opens in Google Lens",file:{action:"https://www.google.com/searchbyimage/upload",field:"encoded_image",extra:{image_content:"",filename:"",hl:"en"}},url:u=>"https://www.google.com/searchbyimage?sbisrc=cr_1_5_2&image_url="+encodeURIComponent(u),home:"https://lens.google.com/"},
+{id:"lens",name:"Google Lens",cat:"General",note:"Link only",url:u=>"https://lens.google.com/uploadbyurl?url="+encodeURIComponent(u),home:"https://lens.google.com/"},
+{id:"bing",name:"Bing Visual Search",cat:"General",note:"Products and places",file:{action:"https://www.bing.com/images/search?view=detailv2&iss=sbiupload&FORM=SBIHMP&sbisrc=ImgDropper",field:"imageBin",b64:true,extra:{}},url:u=>"https://www.bing.com/images/search?view=detailv2&iss=sbi&form=SBIVSP&sbisrc=UrlPaste&q=imgurl:"+encodeURIComponent(u),home:"https://www.bing.com/visualsearch"},
+{id:"yandex",name:"Yandex Images",cat:"General",note:"Strong for faces and places",file:{action:"https://yandex.com/images/search?rpt=imageview&cbir_page=sites",field:"upfile",extra:{}},url:u=>"https://yandex.com/images/search?rpt=imageview&url="+encodeURIComponent(u),home:"https://yandex.com/images/"},
+{id:"baidu",name:"Baidu",cat:"General",note:"Link only",url:u=>"https://graph.baidu.com/details?isfromtusoupc=1&tn=pc&carousel=0&image="+encodeURIComponent(u),home:"https://graph.baidu.com/pcpage/index?tpl_from=pc"},
+{id:"tineye",name:"TinEye",cat:"Origin",note:"Oldest and edited copies",file:{action:"https://tineye.com/search",field:"image",extra:{}},url:u=>"https://tineye.com/search?url="+encodeURIComponent(u),home:"https://tineye.com/"},
+{id:"karma",name:"Karma Decay",cat:"Origin",note:"Link only",url:u=>"https://karmadecay.com/search?q="+encodeURIComponent(u),home:"https://karmadecay.com/"},
+{id:"saucenao",name:"SauceNAO",cat:"Art",note:"Anime and illustration",file:{action:"https://saucenao.com/search.php",field:"file",extra:{frame:"1",hide:"0",database:"999"}},url:u=>"https://saucenao.com/search.php?url="+encodeURIComponent(u),home:"https://saucenao.com/"},
+{id:"iqdb",name:"IQDB",cat:"Art",note:"Booru galleries",file:{action:"https://iqdb.org/",field:"file",extra:{MAX_FILE_SIZE:"8388608"}},url:u=>"https://iqdb.org/?url="+encodeURIComponent(u),home:"https://iqdb.org/"},
+{id:"ascii2d",name:"ASCII2D",cat:"Art",note:"Link only",url:u=>"https://ascii2d.net/search/url/"+encodeURIComponent(u),home:"https://ascii2d.net/"},
+{id:"tracemoe",name:"trace.moe",cat:"Art",note:"Link only",url:u=>"https://trace.moe/?url="+encodeURIComponent(u),home:"https://trace.moe/"}
+];
+const state={blob:null,url:null,b64:null,cat:"All",busy:false,objUrl:null};
+const store={get(k,d){try{const v=localStorage.getItem(k);return v===null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const picked=new Set(store.get("picked",["google","bing","yandex","tineye"]));
+
+function status(msg,type,spin){
+const s=$("status");s.className=type||"";s.textContent="";
+if(spin){const i=document.createElement("span");i.className="spin";s.appendChild(i)}
+s.appendChild(document.createTextNode(msg||""));
+}
+
+function canUse(e){
+if(state.blob)return !!e.file;
+if(state.url)return !!e.url;
+return false;
+}
+
+function renderTabs(){
+const cats=["All",...new Set(ENGINES.map(e=>e.cat))];
+$("tabs").textContent="";
+cats.forEach(c=>{
+const b=document.createElement("button");b.type="button";b.className="tab";b.textContent=c;
+b.setAttribute("aria-pressed",String(c===state.cat));
+b.onclick=()=>{state.cat=c;renderTabs();renderEngines()};
+$("tabs").appendChild(b);
+});
+}
+
+function renderEngines(){
+const box=$("engines");box.textContent="";
+ENGINES.filter(e=>state.cat==="All"||e.cat===state.cat).forEach(e=>{
+const ok=canUse(e);
+const d=document.createElement("div");d.className="eng"+((state.blob||state.url)&&!ok?" off":"");
+const cb=document.createElement("input");cb.type="checkbox";cb.id="e_"+e.id;cb.checked=picked.has(e.id);
+cb.onchange=()=>{cb.checked?picked.add(e.id):picked.delete(e.id);store.set("picked",[...picked])};
+const lb=document.createElement("label");lb.htmlFor=cb.id;
+const t=document.createElement("span");t.textContent=e.name;
+const s=document.createElement("small");s.textContent=state.blob&&!e.file?"Needs an image link":e.note;
+lb.append(t,s);
+const o=document.createElement("button");o.type="button";o.textContent="Search";o.disabled=!ok;
+o.onclick=()=>run([e]);
+d.append(cb,lb,o);box.appendChild(d);
+});
+}
+
+function renderManual(){
+const box=$("manual");box.textContent="";
+ENGINES.forEach(e=>{
+const a=document.createElement("button");a.type="button";a.className="ghost";a.textContent="Open "+e.name;
+a.onclick=()=>window.open(e.home,"_blank","noopener");
+box.appendChild(a);
+});
+}
+
+function syncButtons(){
+const has=!!(state.blob||state.url);
+$("go").disabled=!has;$("all").disabled=!has;
+$("copyImg").disabled=!state.blob;$("dl").disabled=!state.blob;
+$("modeNote").textContent=state.blob?"File mode: images are posted directly to engines that accept uploads. Link-only engines are greyed out.":state.url?"Link mode: engines open with your image link.":"Add an image to begin.";
+renderEngines();
+}
+
+function fmtBytes(n){if(n<1024)return n+" B";if(n<1048576)return (n/1024).toFixed(1)+" KB";return (n/1048576).toFixed(2)+" MB"}
+function showMeta(info){
+const m=$("meta");m.hidden=false;m.textContent="";
+Object.entries(info).forEach(([k,v])=>{const a=document.createElement("span");a.textContent=k;const b=document.createElement("b");b.textContent=v;m.append(a,b)});
+}
+function loadImg(src){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>rej(new Error("That file is not a readable image."));i.src=src})}
+function extFor(t){return({"image/png":"png","image/jpeg":"jpg","image/webp":"webp","image/gif":"gif","image/bmp":"bmp"})[t]||"jpg"}
+
+function reset(){
+if(state.objUrl){URL.revokeObjectURL(state.objUrl);state.objUrl=null}
+state.blob=null;state.url=null;state.b64=null;
+$("preview").removeAttribute("src");$("drop").classList.remove("has");
+$("meta").hidden=true;$("url").value="";$("file").value="";$("cam").value="";
+status("");syncButtons();
+}
+
+async function shrink(blob,maxw){
+if(!maxw||blob.type==="image/gif")return blob;
+const u=URL.createObjectURL(blob);
+try{
+const i=await loadImg(u);
+const m=Math.max(i.naturalWidth,i.naturalHeight);
+if(m<=maxw)return blob;
+const k=maxw/m;
+const c=document.createElement("canvas");c.width=Math.round(i.naturalWidth*k);c.height=Math.round(i.naturalHeight*k);
+c.getContext("2d").drawImage(i,0,0,c.width,c.height);
+const type=blob.type==="image/png"?"image/png":"image/jpeg";
+return await new Promise(r=>c.toBlob(b=>r(b||blob),type,.92));
+}finally{URL.revokeObjectURL(u)}
+}
+
+function toBase64(blob){
+return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(",")[1]||"");r.onerror=()=>rej(new Error("Could not read the image."));r.readAsDataURL(blob)});
+}
+
+async function handleBlob(blob){
+if(!blob||!blob.type.startsWith("image/")){status("Choose an image file (JPG, PNG, WebP, GIF, BMP).","err");return}
+if(blob.size>25*1048576){status("That file is over 25 MB. Choose a smaller image.","err");return}
+status("Preparing image...",null,true);
+try{
+const small=await shrink(blob,parseInt($("maxw").value,10));
+if(state.objUrl)URL.revokeObjectURL(state.objUrl);
+state.objUrl=URL.createObjectURL(small);
+const i=await loadImg(state.objUrl);
+state.blob=small;state.url=null;state.b64=await toBase64(small);
+$("preview").src=state.objUrl;$("drop").classList.add("has");
+showMeta({"Type":small.type,"Size":fmtBytes(small.size),"Dimensions":i.naturalWidth+" x "+i.naturalHeight+" px"});
+status("Ready. Pick engines and search.","ok");
+saveHistory(state.objUrl);
+syncButtons();
+}catch(e){status(e.message,"err")}
+}
+
+function handleUrl(){
+const v=$("url").value.trim();
+let host;
+try{host=new URL(v).hostname;if(!/^https?:$/.test(new URL(v).protocol))throw 0}catch(e){status("Enter a full link starting with http:// or https://","err");return}
+state.url=v;state.blob=null;state.b64=null;
+const p=$("preview");p.referrerPolicy="no-referrer";
+p.onerror=()=>status("Preview is blocked by that site, but searching with the link still works.","err");
+p.onload=()=>showMeta({"Source":host,"Dimensions":p.naturalWidth+" x "+p.naturalHeight+" px"});
+p.src=v;$("drop").classList.add("has");
+showMeta({"Source":host});
+status("Link accepted. Pick engines and search.","ok");
+saveHistory(v);
+syncButtons();
+}
+
+function thumbFrom(src){
+return new Promise(res=>{
+const i=new Image();i.crossOrigin="anonymous";
+i.onload=()=>{try{const c=document.createElement("canvas");const s=96/Math.max(i.naturalWidth,i.naturalHeight);c.width=Math.max(1,Math.round(i.naturalWidth*s));c.height=Math.max(1,Math.round(i.naturalHeight*s));c.getContext("2d").drawImage(i,0,0,c.width,c.height);res(c.toDataURL("image/jpeg",.7))}catch(e){res(null)}};
+i.onerror=()=>res(null);i.src=src;
+});
+}
+
+async function saveHistory(src){
+const thumb=await thumbFrom(src);
+if(!thumb)return;
+const link=src.startsWith("blob:")?null:src;
+const list=store.get("history",[]);
+list.unshift({thumb,link,t:Date.now()});
+store.set("history",list.slice(0,24));
+renderHistory();
+}
+
+function renderHistory(){
+const box=$("history");box.textContent="";
+const list=store.get("history",[]);
+if(!list.length){const p=document.createElement("p");p.className="empty";p.textContent="Nothing yet. Images you search will appear here.";box.appendChild(p);return}
+list.forEach(h=>{
+const b=document.createElement("button");b.type="button";b.title=new Date(h.t).toLocaleString();
+const i=document.createElement("img");i.alt="Previous image";i.src=h.thumb;
+b.appendChild(i);
+b.onclick=async()=>{
+if(h.link){$("url").value=h.link;handleUrl()}
+else{const r=await fetch(h.thumb);handleBlob(await r.blob());status("Loaded a small thumbnail from history. Re-add the original for best results.","")}
+window.scrollTo({top:0,behavior:"smooth"});
+};
+box.appendChild(b);
+});
+}
+
+function postFile(e){
+const f=e.file;
+const form=document.createElement("form");
+form.method="POST";form.action=f.action;form.target="_blank";form.rel="noopener";form.style.display="none";
+if(f.b64){
+form.enctype="application/x-www-form-urlencoded";
+const h=document.createElement("input");h.type="hidden";h.name=f.field;h.value=state.b64;form.appendChild(h);
+}else{
+form.enctype="multipart/form-data";
+const fi=document.createElement("input");fi.type="file";fi.name=f.field;
+const dt=new DataTransfer();
+dt.items.add(new File([state.blob],"image."+extFor(state.blob.type),{type:state.blob.type}));
+fi.files=dt.files;form.appendChild(fi);
+}
+Object.entries(f.extra||{}).forEach(([k,v])=>{const h=document.createElement("input");h.type="hidden";h.name=k;h.value=v;form.appendChild(h)});
+document.body.appendChild(form);
+form.submit();
+setTimeout(()=>form.remove(),1500);
+}
+
+function run(list){
+const usable=list.filter(canUse);
+if(!usable.length){status("None of the selected engines work with this input. Use an image link or pick other engines.","err");return}
+let blocked=0;
+usable.forEach(e=>{
+try{
+if(state.blob)postFile(e);
+else{const w=window.open(e.url(state.url),"_blank","noopener");if(!w)blocked++}
+}catch(err){blocked++}
+});
+if(blocked)status(blocked+" engine(s) did not open. Allow pop-ups for this page, or search them one at a time.","err");
+else status("Sent to "+usable.length+" engine(s). Check the new tabs.","ok");
+}
+
+$("drop").addEventListener("click",()=>$("file").click());
+$("drop").addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();$("file").click()}});
+["dragenter","dragover"].forEach(ev=>$("drop").addEventListener(ev,e=>{e.preventDefault();$("drop").classList.add("over")}));
+["dragleave","drop"].forEach(ev=>$("drop").addEventListener(ev,e=>{e.preventDefault();$("drop").classList.remove("over")}));
+$("drop").addEventListener("drop",e=>{
+const f=e.dataTransfer.files&&e.dataTransfer.files[0];
+if(f){handleBlob(f);return}
+const t=e.dataTransfer.getData("text/uri-list")||e.dataTransfer.getData("text/plain");
+if(t&&/^https?:\/\//i.test(t.trim())){$("url").value=t.trim();handleUrl()}
+});
+$("file").addEventListener("change",e=>{if(e.target.files[0])handleBlob(e.target.files[0])});
+$("cam").addEventListener("change",e=>{if(e.target.files[0])handleBlob(e.target.files[0])});
+$("pick").onclick=()=>$("file").click();
+$("camBtn").onclick=()=>$("cam").click();
+$("clear").onclick=reset;
+$("load").onclick=handleUrl;
+$("url").addEventListener("keydown",e=>{if(e.key==="Enter")handleUrl()});
+document.addEventListener("paste",e=>{
+const items=e.clipboardData&&e.clipboardData.items;
+if(!items)return;
+for(const it of items){if(it.type.startsWith("image/")){e.preventDefault();handleBlob(it.getAsFile());return}}
+const t=(e.clipboardData.getData("text")||"").trim();
+if(/^https?:\/\//i.test(t)&&document.activeElement!==$("url")){$("url").value=t;handleUrl()}
+});
+$("pasteBtn").onclick=async()=>{
+try{
+const items=await navigator.clipboard.read();
+for(const it of items){const type=it.types.find(t=>t.startsWith("image/"));if(type){handleBlob(await it.getType(type));return}}
+const txt=(await navigator.clipboard.readText()).trim();
+if(/^https?:\/\//i.test(txt)){$("url").value=txt;handleUrl();return}
+status("No image or link found on the clipboard.","err");
+}catch(e){status("Clipboard access was denied. Press Ctrl+V on the page instead.","err")}
+};
+$("copyImg").onclick=async()=>{
+try{
+let b=state.blob;
+if(b.type!=="image/png"){
+const i=await loadImg(state.objUrl);
+const c=document.createElement("canvas");c.width=i.naturalWidth;c.height=i.naturalHeight;c.getContext("2d").drawImage(i,0,0);
+b=await new Promise(r=>c.toBlob(r,"image/png"));
+}
+await navigator.clipboard.write([new ClipboardItem({"image/png":b})]);
+status("Image copied. Paste it on the engine's upload page with Ctrl+V.","ok");
+}catch(e){status("Your browser would not copy the image. Use Download image instead.","err")}
+};
+$("dl").onclick=()=>{
+const a=document.createElement("a");a.href=state.objUrl;a.download="image."+extFor(state.blob.type);document.body.appendChild(a);a.click();a.remove();
+};
+$("go").onclick=()=>{
+const list=ENGINES.filter(e=>picked.has(e.id));
+if(!list.length){status("Select at least one engine.","err");return}
+run(list);
+};
+$("all").onclick=()=>run(ENGINES);
+$("sel").onclick=()=>{ENGINES.forEach(e=>picked.add(e.id));store.set("picked",[...picked]);renderEngines()};
+$("none").onclick=()=>{picked.clear();store.set("picked",[]);renderEngines()};
+$("wipe").onclick=()=>{store.set("history",[]);renderHistory()};
+
+$("maxw").value=store.get("maxw","1600");
+$("maxw").addEventListener("change",()=>store.set("maxw",$("maxw").value));
+$("theme").onclick=()=>{
+const cur=document.documentElement.getAttribute("data-theme");
+const dark=cur?cur==="dark":matchMedia("(prefers-color-scheme: dark)").matches;
+const next=dark?"light":"dark";
+document.documentElement.setAttribute("data-theme",next);
+store.set("theme",next);
+};
+const savedTheme=store.get("theme",null);
+if(savedTheme)document.documentElement.setAttribute("data-theme",savedTheme);
+
+const q=new URLSearchParams(location.search).get("url");
+if(q&&/^https?:\/\//i.test(q)){$("url").value=q;handleUrl()}
+
+renderTabs();renderManual();renderHistory();syncButtons();
+</script>
+</body>
+</html>
